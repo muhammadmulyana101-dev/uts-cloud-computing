@@ -1,0 +1,53 @@
+services:
+  web:
+    build: ./app
+    container_name: web_app
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - proxysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  proxysql:
+    image: proxysql/proxysql:2.6.2
+    container_name: proxysql
+    restart: always
+    ports:
+      - "6033:6033"
+      - "6032:6032"
+    volumes:
+      - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
+    depends_on:
+      - mysql
+
+  netdata:
+    image: netdata/netdata
+    container_name: netdata
+    restart: always
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    ports:
+      - "19999:19999"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  mysql_data:
